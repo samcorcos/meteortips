@@ -1,14 +1,18 @@
 <head>
-  <title>leaderboard</title>
+  <title>Leaderboard</title>
 </head>
 
 <body>
-  <h1>Welcome to Meteor!</h1>
-
-  {{> hello}}
+  <h1>Leaderboard</h1>
+  {{> leaderboard}}
 </body>
 
-<template name="hello">
-  <button>Click Me</button>
-  <p>You've pressed the button {{counter}} times.</p>
+<template name="leaderboard">
+  Hello World
+  <ul>
+    {{#each player}}
+    <li class="player">{{name}}: {{score}}</li>
+    {{/each}}
+  </ul>
+  {{otherHelperFunction}}
 </template>
