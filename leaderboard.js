@@ -13,8 +13,8 @@ if(Meteor.isClient){
   });
   
   Template.leaderboard.events({
-    "click .play": function(){
-      console.log("You clicked on an li element");
+    "click .player": function(){
+      console.log("You clicked on a player element");
     }
   })
   
