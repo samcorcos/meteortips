@@ -199,4 +199,273 @@ As a result, when a user adds a player to the leaderboard, the unique id of that
 
 We will not modify the player function that's attaache dot hte "leaderboard" template
 
-Now we're modifyting the function to 
+Now we're modifyting the function to return teh players form teh collection where the createdBy fienld matches the uniqueId fo the currently logged in user
+
+    'player': function() {
+      var currentUserId = MEteor.userId();
+      return PlayersList.find({createdBy: currentUSerId}, {sort: {score: -1, name: 1}})
+    }
+    
+This ensure that users will only see players they add to the leaderboard, creating the effect of a unique leaderaboard
+
+________
+
+On to Publish and Subscribe
+
+We havent talked about securuty
+
+First, publicaations and subscriptions
+
+IF you create three players from two different user acounts...
+
+If you log out of the accounts, and inside Console, use PlayersList.find().fetch(), you will get all the data from teh collection
+
+Unless we turn off this feature, every user will ahve the same access to data
+
+This method exists because it's convenient
+
+We've used find and fetch functons that have been great tools for managing and observing data
+
+The functinoality that allows all this work is the autopublish package
+
+if we remove this proejct, users wont be able to access any data through the console. But... It will also break the app
+
+removing autopublish makes databases inaccessible form the console
+
+but, if we log into our account, we cant see our own data!!
+
+We not only made it inaccessible to the console, we made it inaccessible to the entire client!!
+
+we need something int eh middle. 
+
+We;ve been wrigin all our code in the isClient conditional
+
+this is because weve been writing code thats meant to run in the browser
+
+all of the code in the is client has been linked to one of the tmaplesat
+
+there are plenty of times to run client on the server.
+
+To demonstarte, just writnge the following in isServer
+
+We still have free reign over our data in the server bceause code that is executed in teh server is inherently trusted
+
+So while we've stopped ussers of the app from accessing data, we acn continue to retrieve the data on the server
+
+users will never have access t the server
+
+Add MEteor.publish(); to the console, then
+
+    Meteor.publish("thePlayers");
+
+then... a second argument
+
+    Meteor.publish("thePlayers", function() {
+      return PlayersList.find();
+    })
+
+This code will duplicate the functionality of the autppblish package by returning all teh daat
+
+Because the MEteor.publish function is executing on the server, we can subscribe to the data from teh isClient
+
+if you imagine that publish is the function that transmits the data, then sublscrine is the function that cathes the data
+
+Inside the isClient, write:
+
+Meteor.subscribe("thePlayers")l
+
+Then you'll get all teh data you wanted
+
+________
+
+Precice publications
+
+we now want publish to only publish data that belongs to the currently logged in user.
+
+1. logged in users will only hav eaccess to their own data
+2. logged out users wont have access to any data
+
+In the end, it will have the same functionaly, but wont be vulnerable to attacks in the console
+
+To achieve this, we need to accest the unique id ofthe logged in user from insude meteor.pbulsh function.  
+
+We can't however use the Meteor.userId() function we talked about earlier.
+
+Instead, when we are inside a publish function, we have to write "this.userId"
+
+But even though the syntax is different, the end result is the same. 
+
+    Meteor.publish("thePlayers", function(){
+      var currentUserId = this.userId;
+      return PlayersList.find({createdBy: currentUserId})
+    })
+
+IF youre logged in, youll only see the data the belongs to your user id
+
+Also important to note, we can simplify teh player function because w are no longers orting by createdBy
+
+__________
+
+In teh previous chapter we talked about hte two security issues that are default included to make htings easy to navigate
+
+We remved autopublish
+
+But now, there is another issue--people can still insert data to the database from the console
+
+This is all in the "insecure" package, which we will now remove
+
+1. WE can no longer give points to teh players
+2. We can no longer take points away
+3. We can no longer remove players or add them to the list
+
+Almost all of the features stopped working
+
+We can fix this with a method
+
+So far, all of our insert, update and remove functions have been in teh isClient conditional
+
+this was quick and easy
+
+but it's also why it was insecure. we've been placing sensitive functions on the client, in the browser
+
+The alternate is the isServer, whic means
+
+1. database-related code will execute within the trusted environment o fhte server
+2. users wont bea ble to use the funciton sform in teh scondolse sin they dont ahve acess to the server
+
+The application will worjk again once we move them to the server (a migration)
+
+To achieve this migration, we need to create our first "Meteor Method"
+
+methods are blocks of code that are executed on teh server after being triggered by the client
+
+    Meteor.methods({
+      "sendLogMessage": function(){
+      console.log("hello world");
+      }
+    })
+
+Then, we will go to the client and have the client call our method from elsewhere int eh code. We can do this in our submit form event:
+
+    "submit form": function(event) {
+      event.preventDefault();
+      var playerNameVar = event.playerName.value;
+      var currentUserId = Meteor.userId();
+      PlayersList.insert({
+        name: playerNameVar,
+        score: 0,
+        createdBy: currentUserId
+      });
+      Meteor.call("sendLogMessage");
+    }
+
+To get our app working again, we need to move the insert function form from the client to the server
+
+This means that hte insert functino will secureily esxecute on teh server
+
+users wont beable to insert data from teh console
+
+    Meteor.methods({
+      'insertPlayerData': function() {
+        var currentUserId = Meteor.userId();
+        PlayersList.insert({
+          name: "David",
+          score: 0,
+          createdBy: currentUserId
+        })
+      }
+    })
+
+Then we go to the submit form event in th eclient and use Meteor.call
+
+    "submit form": function(event){
+      event.preventDefault();
+      var playerNameVar = event.target.playerName.value;
+      Meteor.call("insertPlayerData");
+    }
+
+Based on tehse changes, the add player form will now kind of work. IF we ubmit it, we can see that we added david... and every time we add someone, we still add david. 
+That's because we arent taking in anything from the clinent
+
+____
+
+Passing arguments
+
+Modify the Meteor.call statement by passing throught eh playerNameVar as teh second argumenbt
+
+    "submit form": function(event){
+      event.preventDefault();
+      var playerNameVar = event.target.playerName.value;
+      Meteor.call("insertPlayerData", playerNameVar);
+    }
+
+Because of this we are nw able to make our method accept this argument by passing playerNameVar between teh brackets of the method's function
+
+    Meteor.methods({
+      "insertPlayerData": function(playerNameVar){   -- this is where we are now passing in a variable, used as the second parameter in the Meteor.call
+        var currentUserId = Meteor.userId();
+        PlayerList.insert({
+          name: playerNameVar,
+          score: 0,
+          createdBy: currentUserId
+        })
+      }
+    })
+
+Now we need to figure out how to let the logged in user to remove a player
+
+    "click .remove": function() {
+      var selectedPlayer = session.get("selectedPlayer");
+      Meteor.call("removePlayerData", selectedPlayer)
+    }
+
+Then define removePlayerData in the Meteor.methods:
+
+    "removePlayerData": function(selectedPlayer){
+      PlayersList.remove(selectedPlayer);
+    }
+
+Now modifying scores
+
+We have been using methods for security
+we can also use them to reduce the amount of code in our apps
+
+We will take the click .increment and click .decrement events and combine them into a single method
+
+    "click .increment": function(){
+      var selectedPlayer = Session.get("selectedPlayer");
+      Meteor.call("modifyPlayerScore", selectedPlayer);
+    }
+
+We're passing "modify player score" with "selectedplayer"
+
+in meteor methods:
+
+    "modifyPlayerScore": function(selectedPlayer){
+      PlayersList.update(selectedPlayer, {$inc: {score: 5}});
+    }
+
+We will now change it to accept two arguments: the seplected player and the amount to increment (-5 or +5)
+
+    "modifyPlayerScore": function(selectedPlayer){
+      PlayersList.update(selectedPlayer, {$inc: {score: scoreValue}});
+    }
+
+Then we want to set up the decrement function to pass two parameters into the modifyPlayerScore method.
+
+    "click .decrement": function(){
+      var selectedPlayer = Session.get("selectedPlayer");
+      Meteor.call("modifyPlayerScore", selectedPlayer, -5);
+    }
+
+IF a javascript file lives in the client folder, you dont need the isClient conditional. same wit4h the server folder
+
+
+
+
+
+
+
+
+
+
