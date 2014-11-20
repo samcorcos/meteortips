@@ -7,12 +7,14 @@
   {{> leaderboard}}
 </body>
 
+
 <template name="leaderboard">
   Hello World
   <ul>
     {{#each players}}
-    <li class="player">{{name}}: {{score}}</li>
+    <li class="player {{selectedClass}}">{{name}}: {{score}}</li>
     {{/each}}
   </ul>
+  <input type="button" class="increment" value="Give 5 Points">
   {{otherHelperFunction}}
 </template>
